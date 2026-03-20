@@ -1,0 +1,79 @@
+<resources>
+    <string name="app_name">ControlAcademico</string>
+    <string name="title_login">Control Académico UDLAP</string>
+    <string name="hint_email">Correo institucional</string>
+    <string name="hint_password">Contraseña</string>
+    <string name="btn_login">Iniciar sesión</string>
+    <string name="btn_register">Registrarse</string>
+
+    <string name="title_profile">Completa tu perfil</string>
+    <string name="hint_name">Nombre completo</string>
+    <string name="hint_matricula">Matrícula</string>
+    <string name="btn_save_profile">Guardar perfil</string>
+
+    <string name="title_home">Inicio</string>
+    <string name="btn_refresh">Actualizar</string>
+    <string name="btn_logout">Cerrar sesión</string>
+    <string name="open_admin_panel">Abrir panel administrador</string>
+    <string name="open_professor_panel">Abrir panel profesor</string>
+    <string name="open_student_panel">Abrir panel alumno</string>
+    <string name="user_resume">Nombre: %1$s\nCorreo: %2$s\nMatrícula: %3$s\nRol: %4$s</string>
+
+    <string name="title_admin">Panel de Administrador</string>
+    <string name="title_admin_users">Gestión de usuarios</string>
+    <string name="title_admin_subject">Crear materia</string>
+    <string name="btn_reload_users">Recargar usuarios</string>
+    <string name="btn_update_role">Actualizar rol</string>
+    <string name="btn_create_subject">Crear materia</string>
+    <string name="hint_subject_name">Nombre de materia</string>
+    <string name="hint_subject_schedule">Horario (ej: L-M 10:00)</string>
+    <string name="hint_professor_email">Correo del profesor</string>
+    <string name="hint_students_emails">Correos de alumnos separados por coma</string>
+
+    <string name="title_professor">Panel de Profesor</string>
+    <string name="btn_load_subjects">Cargar materias</string>
+    <string name="btn_save_grade">Guardar calificación</string>
+    <string name="btn_scan_qr">Escanear QR asistencia</string>
+    <string name="hint_grade">Calificación (0-100)</string>
+
+    <string name="title_student">Panel de Alumno</string>
+    <string name="btn_load_student">Cargar datos</string>
+    <string name="btn_generate_qr">Generar QR de asistencia</string>
+    <string name="title_grades">Calificaciones</string>
+
+    <string name="subject_schedule">Horario: %1$s</string>
+    <string name="scan_prompt">Escanea el QR del alumno</string>
+
+    <string name="msg_email_password_required">Correo y contraseña son requeridos</string>
+    <string name="msg_login_error">No se pudo iniciar sesión</string>
+    <string name="msg_register_error">No se pudo registrar</string>
+    <string name="msg_session_missing">No hay sesión activa</string>
+    <string name="msg_profile_required">Nombre y matrícula son requeridos</string>
+    <string name="msg_save_profile_error">No se pudo guardar el perfil</string>
+    <string name="msg_user_required">Selecciona un usuario</string>
+    <string name="msg_role_updated">Rol actualizado correctamente</string>
+    <string name="msg_role_update_error">No se pudo actualizar el rol</string>
+    <string name="msg_subject_required">Completa todos los datos de la materia</string>
+    <string name="msg_professor_not_found">No se encontró profesor con ese correo</string>
+    <string name="msg_students_not_found">No se encontraron alumnos válidos</string>
+    <string name="msg_subject_created">Materia creada correctamente</string>
+    <string name="msg_subject_create_error">No se pudo crear la materia</string>
+    <string name="msg_no_subjects">No hay materias registradas o no tienes permiso para verlas</string>
+    <string name="msg_no_subject_selected">No hay materia seleccionada. Primero crea/asigna una materia</string>
+    <string name="msg_grade_invalid">La calificación debe ser numérica entre 0 y 100</string>
+    <string name="msg_student_required">Selecciona un alumno</string>
+    <string name="msg_grade_saved">Calificación guardada</string>
+    <string name="msg_grade_error">No se pudo guardar la calificación</string>
+    <string name="msg_scan_cancelled">Escaneo cancelado</string>
+    <string name="msg_qr_invalid">QR inválido</string>
+    <string name="msg_qr_subject_mismatch">QR no corresponde a la materia seleccionada</string>
+    <string name="msg_student_not_enrolled">El alumno no está inscrito en esta materia</string>
+    <string name="msg_subject_not_owned_by_professor">No puedes tomar asistencia de una materia que no te pertenece</string>
+    <string name="msg_attendance_saved">Asistencia registrada para UID: %1$s</string>
+    <string name="msg_attendance_saved_short">Asistencia registrada</string>
+    <string name="msg_attendance_error">No se pudo registrar asistencia</string>
+    <string name="msg_subject_updated">Materia actualizada (inscritos/horario)</string>
+    <string name="msg_subject_update_error">No se pudo actualizar la materia</string>
+    <string name="msg_no_grades">No hay calificaciones disponibles</string>
+    <string name="msg_camera_permission_required">Debes aceptar el permiso de cámara para escanear QR</string>
+</resources>
