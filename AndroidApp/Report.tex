@@ -1,0 +1,176 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{xcolor}
+
+\geometry{margin=2.5cm}
+\hypersetup{hidelinks}
+
+% Force caption prefix to be "Figure" (as requested)
+\addto\captionsspanish{\renewcommand{\figurename}{Figure}}
+
+\newcommand{\EvidenceFigure}[4]{%
+\begin{figure}[H]
+    \centering
+    \IfFileExists{#1}{%
+        \includegraphics[width=#2\textwidth]{#1}
+    }{%
+        \fbox{\parbox{0.92\textwidth}{\textbf{Imagen no encontrada:} \texttt{#1}.\\
+        Coloca el archivo en la ruta indicada (relativa a esta carpeta) para que se inserte automáticamente en el PDF.}}
+    }%
+    \caption{#3}
+    \label{#4}
+\end{figure}
+}
+
+\title{Aplicaci\'on de Control Acad\'emico\\Informe T\'ecnico}
+\author{%
+Jes\'us Alvarez Sombrerero (177516)\\
+Camila Garc\'ia Alvarez (178004)\\
+Celeste Isabel Alonso Garc\'ia (173291)\\
+}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introducci\'on}
+Este documento describe el desarrollo de una aplicaci\'on m\'ovil de \textbf{Control Acad\'emico} en Android (Kotlin) con backend en Firebase. El sistema gestiona materias, roles de usuario (Administrador, Profesor y Alumno), asistencia mediante c\'odigos QR y registro de calificaciones.
+
+\section{Integrantes y organizaci\'on del equipo}
+\subsection*{Integrantes}
+\begin{itemize}[leftmargin=*]
+    \item Jes\'us Alvarez Sombrerero (177516)
+    \item Camila Garc\'ia Alvarez (178004)
+    \item Celeste Isabel Alonso Garc\'ia (173291)
+\end{itemize}
+
+\subsection*{Distribuci\'on de responsabilidades (editable)}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.30\textwidth} >{\raggedright\arraybackslash}p{0.25\textwidth} >{\raggedright\arraybackslash}p{0.40\textwidth}}
+\toprule
+\textbf{Integrante} & \textbf{Rol} & \textbf{Responsabilidades principales} \\
+\midrule
+Jes\'us Alvarez Sombrerero & Backend Firebase & Autenticaci\'on, colecciones Firestore, reglas/validaci\'on, soporte de flujos Admin/Profesor/Alumno. \\
+Camila Garc\'ia Alvarez & Frontend Android & UI/UX en Kotlin, pantallas por rol, navegaci\'on, estados vac\'ios y mensajes, tema oscuro minimalista. \\
+Celeste Isabel Alonso Garc\'ia & QR y almacenamiento & Integraci\'on ZXing (generaci\'on/escaneo), permisos de c\'amara, SharedPreferences (recordar sesi\'on), pruebas end-to-end. \\
+\bottomrule
+\end{longtable}
+\textit{Nota: si tu equipo manej\'o otra distribuci\'on, edita esta tabla.}
+
+\section{Requisitos t\'ecnicos y tecnolog\'ias}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Lenguaje:} Kotlin.
+    \item \textbf{Compatibilidad:} Android API 24+.
+    \item \textbf{Autenticaci\'on:} Firebase Authentication (correo y contrase\~na).
+    \item \textbf{Base de datos:} Firebase Cloud Firestore.
+    \item \textbf{Almacenamiento local:} SharedPreferences (recordar sesi\'on).
+    \item \textbf{QR:} ZXing (generaci\'on en Alumno y escaneo en Profesor).
+\end{itemize}
+
+\section{Arquitectura general}
+La aplicaci\'on sigue una arquitectura sencilla por capas:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{UI (Activities):} pantallas de Login/Registro, configuraci\'on de perfil, pantalla principal y paneles por rol.
+    \item \textbf{Capa de datos (Repository):} operaciones de lectura/escritura en Firestore y mapeo a modelos.
+    \item \textbf{Servicios externos:} Firebase Auth, Firestore y librer\'ia de QR.
+\end{itemize}
+
+\section{Modelo de datos (Firestore)}
+\subsection*{Colecciones}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{users}: perfil del usuario (uid, nombre, matr\'icula, correo, rol).
+    \item \textbf{subjects}: materias (nombre, horario, profesor asignado, alumnos inscritos).
+    \item \textbf{grades}: calificaciones por materia y alumno.
+    \item \textbf{attendance}: registros de asistencia (materia, alumno, profesor, timestamp).
+\end{itemize}
+
+\subsection*{Accesos t\'ipicos}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Administrador:} consulta usuarios, cambia rol (solo a profesor/alumno), crea materias y asigna profesor/alumnos.
+    \item \textbf{Profesor:} consulta sus materias, lista de alumnos por materia, registra calificaciones y asistencia.
+    \item \textbf{Alumno:} consulta materias asignadas, genera QR para pase de lista y consulta calificaciones.
+\end{itemize}
+
+\section{Funcionalidades por rol}
+\subsection{Administrador}
+\begin{itemize}[leftmargin=*]
+    \item Cambiar tipo de usuario (asignar como profesor o alumno).
+    \item Crear nuevas materias.
+    \item Asignar materias a profesor y alumnos.
+\end{itemize}
+
+\subsection{Profesor}
+\begin{itemize}[leftmargin=*]
+    \item Revisar horario de clases (materias asignadas).
+    \item Asignar calificaciones a alumnos inscritos en la materia.
+    \item Tomar lista de asistencia escaneando el c\'odigo QR del alumno.
+\end{itemize}
+
+\subsection{Alumno}
+\begin{itemize}[leftmargin=*]
+    \item Revisar horario de clases (materias asignadas).
+    \item Generar un c\'odigo QR para el pase de lista en la materia actual.
+    \item Ver calificaciones por materia.
+\end{itemize}
+
+\section{Flujo de uso (resumen)}
+\begin{enumerate}[leftmargin=*]
+    \item El usuario se registra o inicia sesi\'on con Firebase Authentication.
+    \item Tras registrarse, completa su perfil (nombre/matr\'icula) y queda como alumno por defecto.
+    \item La app carga el perfil desde Firestore y enruta al panel seg\'un el rol.
+    \item El Administrador gestiona usuarios y materias.
+    \item El Profesor registra calificaciones y asistencia (QR).
+    \item El Alumno consulta materias/calificaciones y genera QR.
+\end{enumerate}
+
+\section{Evidencia y capturas sugeridas}
+Las siguientes figuras est\'an pensadas para cubrir el entregable del PDF (capturas de pantalla).\newline
+\textbf{Instrucci\'on:} guarda tus capturas dentro de \texttt{Mobile/ControlAcademico/figures/} con los nombres indicados. Si a\'un no existen, este documento mostrar\'a un recuadro indicando el archivo faltante.
+
+\subsection*{Firebase (configuraci\'on y evidencia de datos)}
+\EvidenceFigure{figures/01-firebase-project.png}{0.95}{Proyecto Firebase (udlap): vista general en consola (opcionalmente mostrando el nombre del proyecto).}{fig:firebase-project}
+\EvidenceFigure{figures/02-firebase-auth-users.png}{0.95}{Firebase Authentication: lista de usuarios registrados (sin exponer contrase\~nas).}{fig:firebase-auth}
+\EvidenceFigure{figures/03-firestore-collections.png}{0.95}{Cloud Firestore: colecciones creadas (users, subjects, grades, attendance).}{fig:firestore-collections}
+\EvidenceFigure{figures/04-firestore-subject-example.png}{0.95}{Ejemplo de documento de una materia (subjects) con profesor asignado y alumnos inscritos.}{fig:firestore-subject}
+\EvidenceFigure{figures/05-firestore-grade-example.png}{0.95}{Ejemplo de documento de calificaciones (grades) asociado a materia y alumno.}{fig:firestore-grade}
+\EvidenceFigure{figures/06-firestore-attendance-example.png}{0.95}{Ejemplo de documento de asistencia (attendance) tras escanear un QR.}{fig:firestore-attendance}
+
+\subsection*{App (pantallas principales)}
+\EvidenceFigure{figures/07-login.png}{0.55}{Pantalla de inicio de sesi\'on (Login) con correo y contrase\~na.}{fig:login}
+\EvidenceFigure{figures/08-register.png}{0.55}{Pantalla de registro de usuario (Register) con correo y contrase\~na.}{fig:register}
+\EvidenceFigure{figures/09-profile-setup.png}{0.55}{Pantalla de configuraci\'on de perfil (nombre, matr\'icula), posterior al registro.}{fig:profile-setup}
+\EvidenceFigure{figures/10-home-admin.png}{0.60}{Pantalla principal (Home) entrando como Administrador.}{fig:home-admin}
+\EvidenceFigure{figures/11-home-professor.png}{0.60}{Pantalla principal (Home) entrando como Profesor.}{fig:home-professor}
+\EvidenceFigure{figures/12-home-student.png}{0.60}{Pantalla principal (Home) entrando como Alumno.}{fig:home-student}
+
+\subsection*{Administrador (gesti\'on de usuarios y materias)}
+\EvidenceFigure{figures/13-admin-users-list.png}{0.95}{Panel Administrador: lista de usuarios y cambio de rol (solo profesor/alumno).}{fig:admin-users}
+\EvidenceFigure{figures/14-admin-create-subject.png}{0.95}{Panel Administrador: formulario para crear materia (nombre/horario) y asignar profesor + alumnos.}{fig:admin-create-subject}
+\EvidenceFigure{figures/15-admin-subject-created-toast.png}{0.85}{Confirmaci\'on visual (toast/snackbar) o evidencia de que la materia fue creada correctamente.}{fig:admin-subject-created}
+
+\subsection*{Profesor (horario, calificaciones y asistencia)}
+\EvidenceFigure{figures/16-professor-subjects.png}{0.95}{Panel Profesor: lista de materias asignadas y horario.}{fig:prof-subjects}
+\EvidenceFigure{figures/17-professor-grade-form.png}{0.95}{Panel Profesor: asignaci\'on de calificaciones (selecci\'on de materia + alumno y captura de calificacion).}{fig:prof-grade}
+\EvidenceFigure{figures/18-professor-scan-permission.png}{0.70}{Solicitud de permiso de c\'amara (si aparece) o configuraci\'on de permisos habilitados.}{fig:prof-camera-permission}
+\EvidenceFigure{figures/19-professor-scan-qr.png}{0.70}{Esc\'aner de QR en Profesor listo para capturar el c\'odigo del alumno.}{fig:prof-scan}
+\EvidenceFigure{figures/20-professor-attendance-saved.png}{0.85}{Confirmaci\'on de asistencia registrada (mensaje de \"guardado\" y/o lista actualizada).}{fig:prof-attendance-saved}
+
+\subsection*{Alumno (QR, calificaciones y horario)}
+\EvidenceFigure{figures/21-student-qr.png}{0.65}{Panel Alumno: generaci\'on de QR para la materia seleccionada/actual.}{fig:student-qr}
+\EvidenceFigure{figures/22-student-grades.png}{0.95}{Panel Alumno: lista de calificaciones por materia.}{fig:student-grades}
+\EvidenceFigure{figures/23-student-schedule.png}{0.95}{Panel Alumno: horario o lista de materias inscritas.}{fig:student-schedule}
+
+\section{Conclusiones}
+Se implement\'o una aplicaci\'on funcional de control acad\'emico que integra autenticaci\'on, almacenamiento en la nube, manejo de roles y funcionalidad de QR para asistencia. La arquitectura y el modelo de datos permiten extender la aplicaci\'on con nuevas pantallas o validaciones, manteniendo una separaci\'on clara entre UI y acceso a Firestore.
+
+\end{document}
