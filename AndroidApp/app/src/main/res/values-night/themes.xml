@@ -1,0 +1,26 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.ControlAcademico" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/violet_medium</item>
+        <item name="colorPrimaryVariant">@color/violet_light</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <item name="colorSecondary">@color/violet_light</item>
+        <item name="colorSecondaryVariant">@color/violet_medium</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="colorSurface">@color/carbon_surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:windowBackground">@color/carbon_bg</item>
+        <item name="android:statusBarColor">@color/carbon_bg</item>
+        <item name="android:navigationBarColor">@color/carbon_bg</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:fontFamily">serif</item>
+        <item name="textInputStyle">@style/Widget.ControlAcademico.TextInputLayout</item>
+    </style>
+
+    <style name="Widget.ControlAcademico.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/carbon_surface_2</item>
+        <item name="boxStrokeColor">@color/violet_medium</item>
+        <item name="hintTextColor">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
+    </style>
+</resources>
