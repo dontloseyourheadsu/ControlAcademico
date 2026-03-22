@@ -1,5 +1,7 @@
 package com.udlap.controlacademico.data
 
+import com.google.android.gms.tasks.Tasks
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.udlap.controlacademico.model.AttendanceRecord
@@ -45,17 +47,20 @@ class FirestoreRepository(
     }
 
     fun getUsersByIds(uids: List<String>, onDone: (List<UserProfile>, String?) -> Unit) {
-        if (uids.isEmpty()) {
+        val uniqueUids = uids.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        if (uniqueUids.isEmpty()) {
             onDone(emptyList(), null)
             return
         }
 
-        db.collection("users")
-            .whereIn("uid", uids)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                val users = snapshot.documents
+        val refs = uniqueUids.map { uid -> db.collection("users").document(uid) }
+        val tasks = refs.map { it.get() }
+
+        Tasks.whenAllSuccess<DocumentSnapshot>(tasks)
+            .addOnSuccessListener { docs ->
+                val users = docs
                     .mapNotNull { it.toObject(UserProfile::class.java) }
+                    .filter { it.rol in listOf("alumno", "student") }
                     .sortedBy { it.nombre }
                 onDone(users, null)
             }

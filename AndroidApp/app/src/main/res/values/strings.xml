@@ -12,6 +12,7 @@
     <string name="btn_save_profile">Guardar perfil</string>
 
     <string name="title_home">Inicio</string>
+    <string name="btn_back">Regresar</string>
     <string name="btn_refresh">Actualizar</string>
     <string name="btn_logout">Cerrar sesión</string>
     <string name="open_admin_panel">Abrir panel administrador</string>
