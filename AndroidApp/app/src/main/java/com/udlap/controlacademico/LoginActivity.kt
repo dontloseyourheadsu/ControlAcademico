@@ -15,10 +15,20 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_login)
 
         auth = FirebaseAuth.getInstance()
         prefs = Prefs(this)
+
+        // FIX: Firebase persists the session across app restarts. If the user is
+        // already authenticated there is no need to re-hit the network — just
+        // go straight to Home. Without this check the app always did a redundant
+        // signInWithEmailAndPassword call on every cold start.
+        if (auth.currentUser != null) {
+            goToHome()
+            return
+        }
+
+        setContentView(R.layout.activity_login)
 
         val etEmail = findViewById<EditText>(R.id.etLoginCorreo)
         val etPassword = findViewById<EditText>(R.id.etLoginPass)
@@ -45,6 +55,8 @@ class LoginActivity : AppCompatActivity() {
             registerWithFirebase(email, password)
         }
 
+        // Only attempt silent re-login when Firebase has no active session
+        // (e.g. after the user explicitly signed out and the token was cleared)
         if (prefs.hasCredentials()) {
             autoLoginWithSavedCredentials()
         }
