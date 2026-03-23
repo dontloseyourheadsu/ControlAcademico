@@ -37,10 +37,12 @@ class AdminActivity : AppCompatActivity() {
         val btnUpdateRole = findViewById<Button>(R.id.btnUpdateRole)
         val btnCreateSubject = findViewById<Button>(R.id.btnCreateSubject)
         val btnReload = findViewById<Button>(R.id.btnReloadUsers)
+        val btnBack = findViewById<Button>(R.id.btnBackFromAdmin)  // FIX: was never wired up
 
         setupRoleSpinner()
         loadUsers()
 
+        btnBack.setOnClickListener { finish() }
         btnReload.setOnClickListener { loadUsers() }
         btnUpdateRole.setOnClickListener { updateRoleForSelectedUser() }
         btnCreateSubject.setOnClickListener { createSubject() }
