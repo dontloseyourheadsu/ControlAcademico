@@ -70,7 +70,7 @@
     <string name="msg_qr_subject_mismatch">QR no corresponde a la materia seleccionada</string>
     <string name="msg_student_not_enrolled">El alumno no está inscrito en esta materia</string>
     <string name="msg_subject_not_owned_by_professor">No puedes tomar asistencia de una materia que no te pertenece</string>
-    <string name="msg_attendance_saved">Asistencia registrada para UID: %1$s</string>
+    <string name="msg_attendance_saved">Asistencia registrada para: %1$s</string>
     <string name="msg_attendance_saved_short">Asistencia registrada</string>
     <string name="msg_attendance_error">No se pudo registrar asistencia</string>
     <string name="msg_subject_updated">Materia actualizada (inscritos/horario)</string>

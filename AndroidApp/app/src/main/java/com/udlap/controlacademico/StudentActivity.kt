@@ -46,14 +46,11 @@ class StudentActivity : AppCompatActivity() {
         val btnGenerateQr = findViewById<Button>(R.id.btnGenerateQr)
         val btnBack = findViewById<Button>(R.id.btnBackFromStudent)
 
-        btnLoad.setOnClickListener {
-            loadSubjects()
-            loadGrades()
-        }
-
-        btnGenerateQr.setOnClickListener {
-            generateQrForSelectedSubject()
-        }
+        // FIX: removed direct loadGrades() call here — loadSubjects() already calls it
+        // in its callback once subjectNameById is populated, so calling it here would
+        // fire before subjects are ready and show raw Firestore IDs instead of names.
+        btnLoad.setOnClickListener { loadSubjects() }
+        btnGenerateQr.setOnClickListener { generateQrForSelectedSubject() }
         btnBack.setOnClickListener { finish() }
 
         spSubjects.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -65,7 +62,6 @@ class StudentActivity : AppCompatActivity() {
         }
 
         loadSubjects()
-        loadGrades()
     }
 
     private fun loadSubjects() {
@@ -81,6 +77,7 @@ class StudentActivity : AppCompatActivity() {
             val labels = subjects.map { it.nombre }
             spSubjects.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
             refreshSelectedSubjectInfo()
+            // Grades are loaded here, after subjectNameById is ready, so names resolve correctly
             loadGrades()
         }
     }

@@ -60,7 +60,9 @@ class ProfessorActivity : AppCompatActivity() {
         val btnLoad = findViewById<Button>(R.id.btnLoadSubjectsProfessor)
         val btnSaveGrade = findViewById<Button>(R.id.btnSaveGrade)
         val btnScan = findViewById<Button>(R.id.btnScanQr)
+        val btnBack = findViewById<Button>(R.id.btnBackFromProfessor)  // FIX: was never wired up
 
+        btnBack.setOnClickListener { finish() }
         btnLoad.setOnClickListener { loadSubjects() }
         btnSaveGrade.setOnClickListener { saveGrade() }
         btnScan.setOnClickListener { scanQr() }
@@ -154,6 +156,7 @@ class ProfessorActivity : AppCompatActivity() {
 
         repository.saveGrade(record) { ok, error ->
             if (ok) {
+                etGrade.text.clear()  // FIX: clear field after successful save to prevent accidental re-submit
                 showToast(getString(R.string.msg_grade_saved))
             } else {
                 showToast(error ?: getString(R.string.msg_grade_error))
