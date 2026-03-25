@@ -9,10 +9,22 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.udlap.controlacademico.data.Prefs
 
+/**
+ * Authentication entry screen for email/password login and registration.
+ *
+ * This Activity directly invokes Firebase Auth and stores credentials through [Prefs]
+ * to support optional silent sign-in when no active Firebase session exists.
+ */
 class LoginActivity : AppCompatActivity() {
+    /** Firebase authentication gateway used for sign-in and sign-up. */
     private lateinit var auth: FirebaseAuth
+
+    /** Local credential store used for silent login attempts. */
     private lateinit var prefs: Prefs
 
+    /**
+     * Initializes auth dependencies, binds UI, and wires login/register actions.
+     */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -62,6 +74,9 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Signs in existing user and, on success, persists credentials and navigates to Home.
+     */
     private fun loginWithFirebase(email: String, password: String) {
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
@@ -74,6 +89,9 @@ class LoginActivity : AppCompatActivity() {
             }
     }
 
+    /**
+     * Registers a new Firebase account and routes user to profile setup.
+     */
     private fun registerWithFirebase(email: String, password: String) {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
@@ -90,6 +108,11 @@ class LoginActivity : AppCompatActivity() {
             }
     }
 
+    /**
+     * Attempts sign-in using previously stored credentials.
+     *
+     * Clears credentials if they are no longer valid.
+     */
     private fun autoLoginWithSavedCredentials() {
         val email = prefs.getEmail()
         val password = prefs.getPassword()
@@ -106,6 +129,9 @@ class LoginActivity : AppCompatActivity() {
             }
     }
 
+    /**
+     * Opens HomeActivity and clears the back stack.
+     */
     private fun goToHome() {
         val intent = Intent(this, HomeActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -114,6 +140,9 @@ class LoginActivity : AppCompatActivity() {
         finish()
     }
 
+    /**
+     * Displays short user-facing feedback for auth outcomes.
+     */
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }

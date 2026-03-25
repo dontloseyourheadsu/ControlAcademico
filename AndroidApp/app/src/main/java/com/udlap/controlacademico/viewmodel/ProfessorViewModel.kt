@@ -9,6 +9,9 @@ import com.udlap.controlacademico.model.GradeRecord
 import com.udlap.controlacademico.model.Subject
 import com.udlap.controlacademico.model.UserProfile
 
+/**
+ * UI status values for professor workflows: subject loading, grading, attendance.
+ */
 enum class ProfessorStatus {
     INITIAL,
     LOADING_SUBJECTS,
@@ -20,6 +23,15 @@ enum class ProfessorStatus {
     REGISTERING_ATTENDANCE
 }
 
+/**
+ * Immutable render state for ProfessorActivity controls and labels.
+ *
+ * @property status Current async/interaction phase.
+ * @property subjectLabels Subject names rendered in subject spinner.
+ * @property studentLabels Student entries rendered in student spinner.
+ * @property schedule Schedule text for selected subject.
+ * @property lastAttendanceMessage Last success message shown in attendance label.
+ */
 data class ProfessorViewState(
     val status: ProfessorStatus = ProfessorStatus.INITIAL,
     val subjectLabels: List<String> = emptyList(),
@@ -28,21 +40,45 @@ data class ProfessorViewState(
     val lastAttendanceMessage: String = ""
 )
 
+/**
+ * ViewModel for professor panel use cases.
+ *
+ * MVVM connection:
+ * - Activity forwards UI intents (load, select, grade, scan).
+ * - ViewModel validates business rules and queries [FirestoreRepository].
+ * - ViewModel emits [state] and [toastEvent] for UI rendering and feedback.
+ */
 class ProfessorViewModel(
     private val repository: FirestoreRepository = FirestoreRepository()
 ) : ViewModel() {
 
+    /** Mutable state backing field. */
     private val _state = MutableLiveData(ProfessorViewState())
+
+    /** Public screen state observed by ProfessorActivity. */
     val state: LiveData<ProfessorViewState> = _state
 
+    /** One-shot text events for transient UI messages. */
     private val _toastEvent = MutableLiveData<Event<String>>()
+
+    /** Public toast event stream for Activity observers. */
     val toastEvent: LiveData<Event<String>> = _toastEvent
 
+    /** Backing list tied to subject spinner indexes. */
     private var subjects: List<Subject> = emptyList()
+
+    /** Backing list tied to student spinner indexes for selected subject. */
     private var studentsForSubject: List<UserProfile> = emptyList()
+
+    /** Token that discards stale subject-loading callbacks. */
     private var subjectsRequestToken: Int = 0
+
+    /** Token that discards stale student-loading callbacks after subject changes. */
     private var studentsRequestToken: Int = 0
 
+    /**
+     * Loads subjects that belong to the logged-in professor.
+     */
     fun loadSubjects(professorUid: String?) {
         if (professorUid.isNullOrBlank()) {
             _toastEvent.value = Event("No hay sesión activa")
@@ -77,6 +113,9 @@ class ProfessorViewModel(
         }
     }
 
+    /**
+     * Loads students and schedule for the selected subject spinner position.
+     */
     fun refreshSelectedSubject(position: Int) {
         val selected = subjects.getOrNull(position) ?: return
 
@@ -119,6 +158,9 @@ class ProfessorViewModel(
         }
     }
 
+    /**
+     * Validates and stores one grade for selected student/subject.
+     */
     fun saveGrade(
         selectedSubjectPosition: Int,
         selectedStudentPosition: Int,
@@ -168,6 +210,9 @@ class ProfessorViewModel(
         }
     }
 
+    /**
+     * Validates QR payload and delegates transactional attendance registration.
+     */
     fun registerAttendanceFromQr(
         qrContent: String,
         selectedSubjectPosition: Int,
@@ -229,6 +274,9 @@ class ProfessorViewModel(
         }
     }
 
+    /**
+     * Restores idle-ready status after grade/attendance operations complete.
+     */
     private fun restoreReadyStatus() {
         _state.value = _state.value?.copy(
             status = if (studentsForSubject.isEmpty()) ProfessorStatus.SUBJECTS_READY else ProfessorStatus.STUDENTS_READY
