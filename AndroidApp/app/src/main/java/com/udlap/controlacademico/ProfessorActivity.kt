@@ -34,6 +34,9 @@ class ProfessorActivity : AppCompatActivity() {
     private lateinit var btnLoad: Button
     private lateinit var btnSaveGrade: Button
     private lateinit var btnScan: Button
+    private var renderedSubjectLabels: List<String> = emptyList()
+    private var renderedStudentLabels: List<String> = emptyList()
+    private var isProgrammaticSubjectSelection: Boolean = false
 
     private val cameraPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -74,6 +77,7 @@ class ProfessorActivity : AppCompatActivity() {
 
         spSubjects.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (isProgrammaticSubjectSelection) return
                 viewModel.refreshSelectedSubject(position)
             }
 
@@ -174,8 +178,22 @@ class ProfessorActivity : AppCompatActivity() {
 
     private fun observeViewModel() {
         viewModel.state.observe(this) { state ->
-            setSubjectsAdapter(state.subjectLabels)
-            setStudentsAdapter(state.studentLabels)
+            if (state.subjectLabels != renderedSubjectLabels) {
+                val currentSelection = spSubjects.selectedItemPosition.coerceAtLeast(0)
+                renderedSubjectLabels = state.subjectLabels
+                isProgrammaticSubjectSelection = true
+                setSubjectsAdapter(state.subjectLabels)
+                if (state.subjectLabels.isNotEmpty()) {
+                    val restoredSelection = currentSelection.coerceAtMost(state.subjectLabels.lastIndex)
+                    spSubjects.setSelection(restoredSelection, false)
+                }
+                isProgrammaticSubjectSelection = false
+            }
+
+            if (state.studentLabels != renderedStudentLabels) {
+                renderedStudentLabels = state.studentLabels
+                setStudentsAdapter(state.studentLabels)
+            }
 
             tvSchedule.text = if (state.schedule.isBlank()) {
                 getString(R.string.msg_no_subjects)

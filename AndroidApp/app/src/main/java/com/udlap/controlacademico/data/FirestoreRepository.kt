@@ -60,7 +60,7 @@ class FirestoreRepository(
             .addOnSuccessListener { docs ->
                 val users = docs
                     .mapNotNull { it.toObject(UserProfile::class.java) }
-                    .filter { it.rol in listOf("alumno", "student") }
+                    .filter { it.rol.trim().lowercase() in listOf("alumno", "student") }
                     .sortedBy { it.nombre }
                 onDone(users, null)
             }
