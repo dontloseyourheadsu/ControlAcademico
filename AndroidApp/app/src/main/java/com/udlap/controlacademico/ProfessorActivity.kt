@@ -15,26 +15,25 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.zxing.integration.android.IntentIntegrator
 import com.google.zxing.integration.android.IntentResult
-import com.udlap.controlacademico.data.FirestoreRepository
-import com.udlap.controlacademico.model.GradeRecord
-import com.udlap.controlacademico.model.Subject
-import com.udlap.controlacademico.model.UserProfile
+import com.udlap.controlacademico.viewmodel.ProfessorStatus
+import com.udlap.controlacademico.viewmodel.ProfessorViewModel
 
 class ProfessorActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
-    private val repository = FirestoreRepository()
+    private lateinit var viewModel: ProfessorViewModel
 
     private lateinit var spSubjects: Spinner
     private lateinit var spStudents: Spinner
     private lateinit var tvSchedule: TextView
     private lateinit var tvLastAttendance: TextView
     private lateinit var etGrade: EditText
-
-    private var subjects: List<Subject> = emptyList()
-    private var studentsForSubject: List<UserProfile> = emptyList()
+    private lateinit var btnLoad: Button
+    private lateinit var btnSaveGrade: Button
+    private lateinit var btnScan: Button
 
     private val cameraPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -50,6 +49,7 @@ class ProfessorActivity : AppCompatActivity() {
         setContentView(R.layout.activity_professor)
 
         auth = FirebaseAuth.getInstance()
+        viewModel = ViewModelProvider(this)[ProfessorViewModel::class.java]
 
         spSubjects = findViewById(R.id.spSubjectsProfessor)
         spStudents = findViewById(R.id.spStudentsProfessor)
@@ -57,115 +57,44 @@ class ProfessorActivity : AppCompatActivity() {
         tvLastAttendance = findViewById(R.id.tvAttendanceResult)
         etGrade = findViewById(R.id.etGrade)
 
-        val btnLoad = findViewById<Button>(R.id.btnLoadSubjectsProfessor)
-        val btnSaveGrade = findViewById<Button>(R.id.btnSaveGrade)
-        val btnScan = findViewById<Button>(R.id.btnScanQr)
+        btnLoad = findViewById(R.id.btnLoadSubjectsProfessor)
+        btnSaveGrade = findViewById(R.id.btnSaveGrade)
+        btnScan = findViewById(R.id.btnScanQr)
         val btnBack = findViewById<Button>(R.id.btnBackFromProfessor)  // FIX: was never wired up
 
+        setSubjectsAdapter(emptyList())
+        setStudentsAdapter(emptyList())
+        applyUiState(ProfessorStatus.INITIAL)
+        observeViewModel()
+
         btnBack.setOnClickListener { finish() }
-        btnLoad.setOnClickListener { loadSubjects() }
+        btnLoad.setOnClickListener { viewModel.loadSubjects(auth.currentUser?.uid) }
         btnSaveGrade.setOnClickListener { saveGrade() }
         btnScan.setOnClickListener { scanQr() }
 
         spSubjects.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                refreshSelectedSubject()
+                viewModel.refreshSelectedSubject(position)
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
 
-        loadSubjects()
-    }
-
-    private fun loadSubjects() {
-        val user = auth.currentUser ?: return
-        repository.getSubjectsByProfessor(user.uid) { list, error ->
-            if (error != null) {
-                showToast(error)
-                return@getSubjectsByProfessor
-            }
-
-            subjects = list
-            if (subjects.isEmpty()) {
-                tvSchedule.text = getString(R.string.msg_no_subjects)
-                spSubjects.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, emptyList<String>())
-                spStudents.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, emptyList<String>())
-                return@getSubjectsByProfessor
-            }
-
-            val labels = subjects.map { it.nombre }
-            spSubjects.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
-            refreshSelectedSubject()
-        }
-    }
-
-    private fun refreshSelectedSubject() {
-        if (subjects.isEmpty()) return
-        val selected = subjects[spSubjects.selectedItemPosition.coerceAtLeast(0)]
-        tvSchedule.text = getString(R.string.subject_schedule, selected.horario)
-
-        if (selected.alumnosUids.isEmpty()) {
-            studentsForSubject = emptyList()
-            spStudents.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, emptyList<String>())
-            return
-        }
-
-        repository.getUsersByIds(selected.alumnosUids) { users, error ->
-            if (error != null) {
-                showToast(error)
-                studentsForSubject = emptyList()
-                spStudents.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, emptyList<String>())
-                return@getUsersByIds
-            }
-
-            studentsForSubject = users
-            val labels = users.map { "${it.nombre} • ${it.matricula} • ${it.correo}" }
-            spStudents.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
-        }
+        viewModel.loadSubjects(auth.currentUser?.uid)
     }
 
     private fun saveGrade() {
-        val user = auth.currentUser ?: return
-        if (subjects.isEmpty()) {
-            showToast(getString(R.string.msg_no_subject_selected))
-            return
-        }
-
         val grade = etGrade.text.toString().toDoubleOrNull()
-        if (grade == null || grade < 0 || grade > 100) {
-            showToast(getString(R.string.msg_grade_invalid))
-            return
-        }
-
-        val subject = subjects[spSubjects.selectedItemPosition.coerceAtLeast(0)]
-        val student = studentsForSubject.getOrNull(spStudents.selectedItemPosition)
-        val studentUid = student?.uid.orEmpty()
-        if (studentUid.isBlank()) {
-            showToast(getString(R.string.msg_student_required))
-            return
-        }
-
-        val record = GradeRecord(
-            subjectId = subject.id,
-            studentUid = studentUid,
-            professorUid = user.uid,
-            calificacion = grade,
-            updatedAt = System.currentTimeMillis()
+        viewModel.saveGrade(
+            selectedSubjectPosition = spSubjects.selectedItemPosition,
+            selectedStudentPosition = spStudents.selectedItemPosition,
+            professorUid = auth.currentUser?.uid,
+            grade = grade
         )
-
-        repository.saveGrade(record) { ok, error ->
-            if (ok) {
-                etGrade.text.clear()  // FIX: clear field after successful save to prevent accidental re-submit
-                showToast(getString(R.string.msg_grade_saved))
-            } else {
-                showToast(error ?: getString(R.string.msg_grade_error))
-            }
-        }
     }
 
     private fun scanQr() {
-        if (subjects.isEmpty()) {
+        if ((spSubjects.adapter?.count ?: 0) == 0) {
             showToast(getString(R.string.msg_no_subject_selected))
             return
         }
@@ -205,51 +134,67 @@ class ProfessorActivity : AppCompatActivity() {
     }
 
     private fun processAttendanceQr(content: String) {
-        runCatching {
-            val user = auth.currentUser ?: throw IllegalStateException(getString(R.string.msg_session_missing))
+        viewModel.registerAttendanceFromQr(
+            qrContent = content,
+            selectedSubjectPosition = spSubjects.selectedItemPosition,
+            professorUid = auth.currentUser?.uid
+        )
+    }
 
-            val parts = content.trim().split('|', limit = 2)
-            if (parts.size != 2) {
-                throw IllegalStateException(getString(R.string.msg_qr_invalid))
+    private fun setSubjectsAdapter(labels: List<String>) {
+        spSubjects.adapter = buildSpinnerAdapter(labels)
+    }
+
+    private fun setStudentsAdapter(labels: List<String>) {
+        spStudents.adapter = buildSpinnerAdapter(labels)
+    }
+
+    private fun buildSpinnerAdapter(labels: List<String>): ArrayAdapter<String> {
+        return ArrayAdapter(this, R.layout.spinner_item, labels).also {
+            it.setDropDownViewResource(R.layout.spinner_dropdown_item)
+        }
+    }
+
+    private fun applyUiState(status: ProfessorStatus) {
+        val busy = status == ProfessorStatus.LOADING_SUBJECTS ||
+            status == ProfessorStatus.LOADING_STUDENTS ||
+            status == ProfessorStatus.SAVING_GRADE ||
+            status == ProfessorStatus.REGISTERING_ATTENDANCE
+
+        val hasSubjects = (spSubjects.adapter?.count ?: 0) > 0
+        val hasStudents = (spStudents.adapter?.count ?: 0) > 0
+
+        spSubjects.isEnabled = hasSubjects && !busy
+        spStudents.isEnabled = hasStudents && !busy
+        etGrade.isEnabled = hasSubjects && hasStudents && !busy
+        btnLoad.isEnabled = !busy
+        btnSaveGrade.isEnabled = hasSubjects && hasStudents && !busy
+        btnScan.isEnabled = hasSubjects && !busy
+    }
+
+    private fun observeViewModel() {
+        viewModel.state.observe(this) { state ->
+            setSubjectsAdapter(state.subjectLabels)
+            setStudentsAdapter(state.studentLabels)
+
+            tvSchedule.text = if (state.schedule.isBlank()) {
+                getString(R.string.msg_no_subjects)
+            } else {
+                getString(R.string.subject_schedule, state.schedule)
             }
 
-            val studentUid = parts[0].trim()
-            val subjectId = parts[1].trim()
-            if (studentUid.isBlank() || subjectId.isBlank()) {
-                throw IllegalStateException(getString(R.string.msg_qr_invalid))
+            if (state.lastAttendanceMessage.isNotBlank()) {
+                tvLastAttendance.text = state.lastAttendanceMessage
             }
 
-            val selectedPosition = spSubjects.selectedItemPosition
-            val selected = subjects.getOrNull(selectedPosition)
-                ?: throw IllegalStateException(getString(R.string.msg_no_subject_selected))
-
-            if (selected.profesorUid != user.uid) {
-                throw IllegalStateException(getString(R.string.msg_subject_not_owned_by_professor))
+            applyUiState(state.status)
+            if (state.status == ProfessorStatus.STUDENTS_READY) {
+                etGrade.text.clear()
             }
+        }
 
-            if (subjectId != selected.id) {
-                throw IllegalStateException(getString(R.string.msg_qr_subject_mismatch))
-            }
-
-            if (!selected.alumnosUids.contains(studentUid)) {
-                throw IllegalStateException(getString(R.string.msg_student_not_enrolled))
-            }
-
-            repository.registerAttendanceFromQr(
-                subjectId = subjectId,
-                studentUid = studentUid,
-                professorUid = user.uid
-            ) { ok, error ->
-                if (ok) {
-                    val studentLabel = studentsForSubject.firstOrNull { it.uid == studentUid }?.nombre ?: studentUid
-                    tvLastAttendance.text = getString(R.string.msg_attendance_saved, studentLabel)
-                    showToast(getString(R.string.msg_attendance_saved_short))
-                } else {
-                    showToast(error ?: getString(R.string.msg_attendance_error))
-                }
-            }
-        }.onFailure {
-            showToast(it.message ?: getString(R.string.msg_attendance_error))
+        viewModel.toastEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { showToast(it) }
         }
     }
 

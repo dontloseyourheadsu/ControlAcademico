@@ -7,12 +7,12 @@ import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.udlap.controlacademico.data.FirestoreRepository
-import com.udlap.controlacademico.model.Subject
-import com.udlap.controlacademico.model.UserProfile
+import androidx.lifecycle.ViewModelProvider
+import com.udlap.controlacademico.viewmodel.AdminStatus
+import com.udlap.controlacademico.viewmodel.AdminViewModel
 
 class AdminActivity : AppCompatActivity() {
-    private val repository = FirestoreRepository()
+    private lateinit var viewModel: AdminViewModel
 
     private lateinit var spUsers: Spinner
     private lateinit var spRoles: Spinner
@@ -20,12 +20,14 @@ class AdminActivity : AppCompatActivity() {
     private lateinit var etHorario: EditText
     private lateinit var etProfesorEmail: EditText
     private lateinit var etAlumnosEmails: EditText
-
-    private var users: List<UserProfile> = emptyList()
+    private lateinit var btnUpdateRole: Button
+    private lateinit var btnCreateSubject: Button
+    private lateinit var btnReload: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_admin)
+        viewModel = ViewModelProvider(this)[AdminViewModel::class.java]
 
         spUsers = findViewById(R.id.spUsers)
         spRoles = findViewById(R.id.spRoles)
@@ -34,59 +36,31 @@ class AdminActivity : AppCompatActivity() {
         etProfesorEmail = findViewById(R.id.etProfesorEmail)
         etAlumnosEmails = findViewById(R.id.etAlumnosEmails)
 
-        val btnUpdateRole = findViewById<Button>(R.id.btnUpdateRole)
-        val btnCreateSubject = findViewById<Button>(R.id.btnCreateSubject)
-        val btnReload = findViewById<Button>(R.id.btnReloadUsers)
+        btnUpdateRole = findViewById(R.id.btnUpdateRole)
+        btnCreateSubject = findViewById(R.id.btnCreateSubject)
+        btnReload = findViewById(R.id.btnReloadUsers)
         val btnBack = findViewById<Button>(R.id.btnBackFromAdmin)  // FIX: was never wired up
 
         setupRoleSpinner()
-        loadUsers()
+        setUsersAdapter(emptyList())
+        observeViewModel()
+        viewModel.loadUsers()
 
         btnBack.setOnClickListener { finish() }
-        btnReload.setOnClickListener { loadUsers() }
+        btnReload.setOnClickListener { viewModel.loadUsers() }
         btnUpdateRole.setOnClickListener { updateRoleForSelectedUser() }
         btnCreateSubject.setOnClickListener { createSubject() }
     }
 
     private fun setupRoleSpinner() {
         val roles = listOf("alumno", "profesor")
-        spRoles.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, roles)
-    }
-
-    private fun loadUsers() {
-        repository.getAllUsers { allUsers, error ->
-            if (error != null) {
-                showToast(error)
-                return@getAllUsers
-            }
-            users = allUsers.sortedBy { it.correo }
-            val labels = users.map { "${it.nombre} (${it.correo}) - ${it.rol}" }
-            spUsers.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, labels)
-        }
+        spRoles.adapter = buildSpinnerAdapter(roles)
     }
 
     private fun updateRoleForSelectedUser() {
         val selectedIndex = spUsers.selectedItemPosition
-        if (selectedIndex < 0 || users.isEmpty()) {
-            showToast(getString(R.string.msg_user_required))
-            return
-        }
-
-        val selectedUser = users[selectedIndex]
         val selectedRole = spRoles.selectedItem?.toString().orEmpty()
-        val role = when (selectedRole) {
-            "profesor" -> "profesor"
-            else -> "alumno"
-        }
-
-        repository.updateUserRole(selectedUser.uid, role) { ok, error ->
-            if (ok) {
-                showToast(getString(R.string.msg_role_updated))
-                loadUsers()
-            } else {
-                showToast(error ?: getString(R.string.msg_role_update_error))
-            }
-        }
+        viewModel.updateRoleForSelectedUser(selectedIndex, selectedRole)
     }
 
     private fun createSubject() {
@@ -94,83 +68,45 @@ class AdminActivity : AppCompatActivity() {
         val horario = etHorario.text.toString().trim()
         val profesorEmail = etProfesorEmail.text.toString().trim()
         val alumnos = etAlumnosEmails.text.toString().split(",").map { it.trim() }.filter { it.isNotBlank() }
+        viewModel.createOrUpdateSubject(nombre, horario, profesorEmail, alumnos)
+    }
 
-        if (nombre.isBlank() || horario.isBlank() || profesorEmail.isBlank() || alumnos.isEmpty()) {
-            showToast(getString(R.string.msg_subject_required))
-            return
-        }
+    private fun setUsersAdapter(labels: List<String>) {
+        spUsers.adapter = buildSpinnerAdapter(labels)
+    }
 
-        repository.getUserByEmail(profesorEmail) { profesor, error ->
-            if (error != null) {
-                showToast(error)
-                return@getUserByEmail
-            }
-            if (profesor == null) {
-                showToast(getString(R.string.msg_professor_not_found))
-                return@getUserByEmail
-            }
-
-            resolveStudentUids(alumnos) { uids ->
-                if (uids.isEmpty()) {
-                    showToast(getString(R.string.msg_students_not_found))
-                    return@resolveStudentUids
-                }
-
-                repository.getSubjectByNameAndProfessor(nombre, profesor.uid) { existing, findError ->
-                    if (findError != null) {
-                        showToast(findError)
-                        return@getSubjectByNameAndProfessor
-                    }
-
-                    if (existing == null) {
-                        val subject = Subject(
-                            nombre = nombre,
-                            horario = horario,
-                            profesorUid = profesor.uid,
-                            alumnosUids = uids
-                        )
-
-                        repository.createSubject(subject) { ok, createError ->
-                            if (ok) {
-                                clearSubjectForm()
-                                showToast(getString(R.string.msg_subject_created))
-                            } else {
-                                showToast(createError ?: getString(R.string.msg_subject_create_error))
-                            }
-                        }
-                    } else {
-                        repository.updateSubjectAssignments(existing.id, horario, uids) { ok, updateError ->
-                            if (ok) {
-                                clearSubjectForm()
-                                showToast(getString(R.string.msg_subject_updated))
-                            } else {
-                                showToast(updateError ?: getString(R.string.msg_subject_update_error))
-                            }
-                        }
-                    }
-                }
-            }
+    private fun buildSpinnerAdapter(labels: List<String>): ArrayAdapter<String> {
+        return ArrayAdapter(this, R.layout.spinner_item, labels).also {
+            it.setDropDownViewResource(R.layout.spinner_dropdown_item)
         }
     }
 
-    private fun resolveStudentUids(emails: List<String>, onDone: (List<String>) -> Unit) {
-        val resolved = mutableListOf<String>()
+    private fun applyUiState(status: AdminStatus) {
+        val busy = status == AdminStatus.LOADING_USERS ||
+            status == AdminStatus.SUBMITTING_ROLE ||
+            status == AdminStatus.SUBMITTING_SUBJECT
+        val usersReady = status == AdminStatus.USERS_READY
 
-        fun resolve(index: Int) {
-            if (index >= emails.size) {
-                onDone(resolved)
-                return
-            }
+        spUsers.isEnabled = usersReady && !busy
+        spRoles.isEnabled = usersReady && !busy
+        btnUpdateRole.isEnabled = usersReady && !busy
+        btnReload.isEnabled = !busy
+        btnCreateSubject.isEnabled = !busy
+    }
 
-            repository.getUserByEmail(emails[index]) { user, _ ->
-                if (user != null) {
-                    resolved.add(user.uid)
-                }
-                resolve(index + 1)
-            }
+    private fun observeViewModel() {
+        viewModel.state.observe(this) { state ->
+            setUsersAdapter(state.userLabels)
+            applyUiState(state.status)
         }
 
-        resolve(0)
+        viewModel.toastEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { showToast(it) }
+        }
+
+        viewModel.clearFormEvent.observe(this) { event ->
+            event.getContentIfNotHandled()?.let { clearSubjectForm() }
+        }
     }
 
     private fun clearSubjectForm() {

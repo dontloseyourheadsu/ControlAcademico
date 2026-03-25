@@ -77,4 +77,5 @@
     <string name="msg_subject_update_error">No se pudo actualizar la materia</string>
     <string name="msg_no_grades">No hay calificaciones disponibles</string>
     <string name="msg_camera_permission_required">Debes aceptar el permiso de cámara para escanear QR</string>
+    <string name="msg_loading_profile">Cargando perfil, espera un momento</string>
 </resources>

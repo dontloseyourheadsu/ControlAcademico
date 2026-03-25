@@ -45,14 +45,16 @@
             android:id="@+id/spUsers"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/carbon_surface_2" />
+            android:background="@drawable/spinner_bg"
+            android:popupBackground="@color/carbon_surface" />
 
         <Spinner
             android:id="@+id/spRoles"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:background="@color/carbon_surface_2" />
+            android:background="@drawable/spinner_bg"
+            android:popupBackground="@color/carbon_surface" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnUpdateRole"
